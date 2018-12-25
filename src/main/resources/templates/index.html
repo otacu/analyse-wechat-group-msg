@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.w3.org/1999/xhtml">
+<head>
+    <meta charset="UTF-8"/>
+    <title>处理微信群消息</title>
+    <script th:src="@{/js/jquery-3.3.1.min.js}"></script>
+    <script type="text/javascript">
+        $(function () {
+            getQRCode();
+            getTableData();
+//            window.setInterval(getTableData, 1000);
+        });
+
+        function getQRCode() {
+            $.ajax({
+                type: 'post',
+                dataType: 'json',
+                url: "/wechat/getQRCode",
+                success: function (data) {
+                    if (200 == data.status) {
+                        //将图片的Base64编码设置给src
+                        $("#QRImage").attr("src", "data:image/jpeg;base64," + data.data);
+                    } else {
+                        alert(data.msg);
+                    }
+                },
+                error: function (data) {
+                    alert('响应失败！');
+                }
+            });
+        }
+
+        function login() {
+            $.ajax({
+                type: 'post',
+                dataType: 'json',
+                url: "/wechat/login",
+                success: function (data) {
+                    alert(data.msg);
+                },
+                error: function (data) {
+                    alert('响应失败！');
+                }
+            });
+        }
+
+        function upload() {
+            if (checkData()) {
+                var formData = new FormData();
+                formData.append("upfile", document.getElementById("upfile").files[0]);
+                $.ajax({
+                    url: "wechat/upload",
+                    type: "post",
+                    data: formData,
+                    contentType: false,
+                    processData: false,
+                    success: function (data) {
+                        uploadCallback(data);
+                    },
+                    error: function (data) {
+                        alert('响应失败！');
+                    }
+                });
+            }
+        }
+
+        //JS校验form表单信息
+        function checkData() {
+            var fileDir = $("#upfile").val();
+            var suffix = fileDir.substr(fileDir.lastIndexOf("."));
+            if ("" == fileDir) {
+                alert("选择需要导入的Excel文件！");
+                return false;
+            }
+            if (".xls" != suffix && ".xlsx" != suffix) {
+                alert("选择Excel格式的文件导入！");
+                return false;
+            }
+            return true;
+        }
+
+        function uploadCallback(data) {
+            alert(data.msg);
+            getTableData();
+        }
+
+        function reset() {
+            $.ajax({
+                type: 'post',
+                dataType: 'json',
+                url: "/wechat/reset",
+                success: function (data) {
+                    alert(data.msg);
+                    if (data.status==200) {
+                        getTableData();
+                    }
+                },
+                error: function (data) {
+                    alert('响应失败！');
+                }
+            });
+        }
+
+        function getTableData() {
+            $.ajax({
+                type: 'post',
+                dataType: 'json',
+                url: "/wechat/getTableData",
+                success: function (data) {
+                    if (data.status == 200) {
+                        rebuildTable(data.data);
+                    } else {
+                        alert(data.msg);
+                    }
+                },
+                error: function (data) {
+                    alert('响应失败！');
+                }
+            });
+        }
+
+        function rebuildTable(data) {
+            //清空所有的子节点
+            $("#J_TbData").empty();
+            var $trTempHead = $("<tr></tr>");
+            $trTempHead.append("<th>姓名</th>");
+            $trTempHead.append("<th>状态</th>");
+            $trTempHead.appendTo("#J_TbData");
+            for (var i = 0; i < data.length; i++) {
+                //动态创建一个tr行标签,并且转换成jQuery对象
+                var $trTemp = $("<tr></tr>");
+                //往行里面追加 td单元格
+                $trTemp.append("<td>" + data[i].name + "</td>");
+                var status = data[i].status == 0 ? "<span style='color: red'>未完成</span>" : "<span style='color: lawngreen'>已完成</span>";
+                $trTemp.append("<td>" + status + "</td>");
+                // $("#J_TbData").append($trTemp);
+                $trTemp.appendTo("#J_TbData");
+            }
+        }
+    </script>
+
+    <style>
+        /*.btn{width: 100px;height:30px;text-align: center;font-size: 14px;line-height:22px;}*/
+        .file {
+            border: 1px solid #99D3F5;
+        }
+
+        table {
+            border-collapse: collapse;
+            border-spacing: 0;
+            border: 1px solid #040404;
+        }
+
+        th,td {
+            border: 1px solid #040404;
+            color: #404060;
+            padding: 10px;
+        }
+
+        th {
+            background-color: #09c;
+            font: bold 16px "微软雅黑";
+            color: #fff;
+        }
+
+        td {
+            font: 14px "微软雅黑";
+        }
+        tbody tr {
+            background-color: #f0f0f0;
+        }
+        tbody tr:hover {
+            cursor: pointer;
+            background-color: #fafafa;
+        }
+    </style>
+</head>
+<body>
+<div style="width: 200px;height: 200px">
+    <img id="QRImage" alt="Base64 encoded image" style="width:100%;height:100%;">
+</div>
+
+<button onclick="getQRCode()" class="btn">刷&nbsp;新&nbsp;二&nbsp;维&nbsp;码</button>&nbsp;&nbsp;
+<button onclick="login()" class="btn">登&nbsp;&nbsp;&nbsp;录</button>&nbsp;&nbsp;
+
+<form id="uploadForm" enctype="multipart/form-data" action="#" style="margin:0px;display:inline;">
+    <input class="file" id="upfile" type="file" name="upfile"/>
+    <button onclick="upload()" class="btn">导&nbsp;入&nbsp;班&nbsp;成&nbsp;员
+    </button>
+</form>&nbsp;&nbsp;
+<button onclick="getTableData()" class="btn">刷&nbsp;新&nbsp;表&nbsp;格</button>
+<button onclick="reset()" class="btn">重&nbsp;置&nbsp;状&nbsp;态</button>
+<br/><br/>
+<table id="J_TbData"></table>
+</body>
+
+</html>
